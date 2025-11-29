@@ -160,9 +160,12 @@
                   colorManagement: true; 
                   sortObjects: false; 
                   physicallyCorrectLights: false;
-                  maxCanvasWidth: 1920; 
-                  maxCanvasHeight: 1920;"
-        vr-mode-ui="enabled: true">
+                  maxCanvasWidth: 1280; 
+                  maxCanvasHeight: 720;
+                  precision: mediump;
+                  logarithmicDepthBuffer: false;"
+        vr-mode-ui="enabled: true"
+        stats>
         <a-assets>
             <video 
                 id="video" 
@@ -175,14 +178,15 @@
             </video>
         </a-assets>
         
-        <!-- 360 video sphere - optimized geometry -->
+        <!-- 360 video sphere - highly optimized -->
         <a-videosphere 
             id="videosphere"
             src="#video"
             rotation="0 180 0"
-            radius="100"
-            segments-width="32"
-            segments-height="24">
+            radius="50"
+            segments-width="24"
+            segments-height="16"
+            material="shader: flat; side: back">
         </a-videosphere>
         
         <!-- Camera with responsive look controls -->
@@ -190,8 +194,8 @@
             look-controls="pointerLockEnabled: false; 
                           touchEnabled: true; 
                           magicWindowTrackingEnabled: true;
-                          reverseMouseDrag: false">
-            <a-cursor></a-cursor>
+                          reverseMouseDrag: false"
+            wasd-controls="enabled: false">
         </a-camera>
     </a-scene>
     
@@ -222,11 +226,12 @@
                 // Reduce video quality if on mobile for better performance
                 if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
                     // Force lower resolution rendering on mobile
-                    const canvas = document.querySelector('canvas');
-                    if (canvas) {
-                        canvas.width = Math.min(window.innerWidth, 1280);
-                        canvas.height = Math.min(window.innerHeight, 720);
-                    }
+                    const sceneEl = document.querySelector('a-scene');
+                    sceneEl.renderer.setPixelRatio(1); // Force 1:1 pixel ratio
+                    
+                    // Reduce video playback quality
+                    video.style.width = '1280px';
+                    video.style.height = '720px';
                 }
                 
                 video.src = url;
