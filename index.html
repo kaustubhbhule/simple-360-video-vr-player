@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>360 VR Video Player</title>
+    <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+        
+        #overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            font-family: Arial, sans-serif;
+            color: white;
+        }
+        
+        #overlay.hidden {
+            display: none;
+        }
+        
+        .title {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .instructions {
+            font-size: 16px;
+            margin-bottom: 30px;
+            text-align: center;
+            max-width: 400px;
+            line-height: 1.6;
+        }
+        
+        #fileInput {
+            display: none;
+        }
+        
+        .btn {
+            padding: 15px 30px;
+            font-size: 18px;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+        
+        .btn-primary {
+            background: #2196F3;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #1976D2;
+            transform: translateY(-2px);
+        }
+        
+        .btn-success {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #388E3C;
+            transform: translateY(-2px);
+        }
+        
+        #controls {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            display: none;
+            gap: 10px;
+        }
+        
+        #controls.visible {
+            display: flex;
+        }
+        
+        .control-btn {
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            transition: all 0.3s;
+        }
+        
+        .control-btn:hover {
+            background: rgba(0, 0, 0, 1);
+            transform: translateY(-2px);
+        }
+        
+        #fileName {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 1000;
+            display: none;
+        }
+        
+        #fileName.visible {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <!-- File selection overlay -->
+    <div id="overlay">
+        <div class="title">🥽 360° VR Video Player</div>
+        <div class="instructions">
+            Select a 360° video file to experience in VR. Works on desktop (drag to look), mobile (gyroscope), and VR headsets.
+        </div>
+        <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
+            📁 Choose Video File
+        </button>
+        <input type="file" id="fileInput" accept="video/*">
+    </div>
+    
+    <!-- Video file name display -->
+    <div id="fileName"></div>
+    
+    <!-- Video controls -->
+    <div id="controls">
+        <button class="control-btn" id="playBtn">▶️ Play</button>
+        <button class="control-btn" id="pauseBtn" style="display: none;">⏸️ Pause</button>
+    </div>
+    
+    <!-- A-Frame scene -->
+    <a-scene>
+        <a-assets>
+            <video 
+                id="video" 
+                loop
+                crossorigin="anonymous"
+                playsinline
+                webkit-playsinline
+                preload="auto"
+                style="display: none;">
+            </video>
+        </a-assets>
+        
+        <!-- 360 video sphere -->
+        <a-videosphere 
+            id="videosphere"
+            src="#video"
+            rotation="0 180 0">
+        </a-videosphere>
+        
+        <!-- Camera with look controls -->
+        <a-camera>
+            <a-cursor></a-cursor>
+        </a-camera>
+    </a-scene>
+    
+    <script>
+        // Get elements
+        const fileInput = document.getElementById('fileInput');
+        const overlay = document.getElementById('overlay');
+        const video = document.getElementById('video');
+        const playBtn = document.getElementById('playBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const controls = document.getElementById('controls');
+        const fileName = document.getElementById('fileName');
+        const scene = document.querySelector('a-scene');
+        
+        // Handle file selection
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            
+            if (file && file.type.startsWith('video/')) {
+                // Create object URL from file
+                const url = URL.createObjectURL(file);
+                video.src = url;
+                
+                // Show file name
+                fileName.textContent = `📹 ${file.name}`;
+                fileName.classList.add('visible');
+                
+                // Hide overlay
+                overlay.classList.add('hidden');
+                
+                // Show controls
+                controls.classList.add('visible');
+                
+                // Load video
+                video.load();
+                
+                // Try to play automatically (may be blocked by browser)
+                const playPromise = video.play();
+                
+                if (playPromise !== undefined) {
+                    playPromise.then(() => {
+                        // Autoplay started
+                        playBtn.style.display = 'none';
+                        pauseBtn.style.display = 'inline-block';
+                    }).catch(error => {
+                        // Autoplay was prevented
+                        console.log('Autoplay prevented, user must click play');
+                        playBtn.style.display = 'inline-block';
+                        pauseBtn.style.display = 'none';
+                    });
+                }
+            } else {
+                alert('Please select a valid video file');
+            }
+        });
+        
+        // Play button
+        playBtn.addEventListener('click', function() {
+            video.play();
+            playBtn.style.display = 'none';
+            pauseBtn.style.display = 'inline-block';
+        });
+        
+        // Pause button
+        pauseBtn.addEventListener('click', function() {
+            video.pause();
+            playBtn.style.display = 'inline-block';
+            pauseBtn.style.display = 'none';
+        });
+        
+        // Handle video events
+        video.addEventListener('play', function() {
+            playBtn.style.display = 'none';
+            pauseBtn.style.display = 'inline-block';
+        });
+        
+        video.addEventListener('pause', function() {
+            playBtn.style.display = 'inline-block';
+            pauseBtn.style.display = 'none';
+        });
+        
+        // Play video when entering VR mode
+        scene.addEventListener('enter-vr', function() {
+            if (video.paused) {
+                video.play();
+            }
+        });
+        
+        // Hide/show controls on click
+        let controlsVisible = true;
+        document.addEventListener('click', function(e) {
+            if (!e.target.matches('button') && !e.target.matches('input')) {
+                controlsVisible = !controlsVisible;
+                if (controlsVisible) {
+                    controls.classList.add('visible');
+                    fileName.classList.add('visible');
+                } else {
+                    controls.classList.remove('visible');
+                    fileName.classList.remove('visible');
+                }
+            }
+        });
+    </script>
+</body>
+</html>
