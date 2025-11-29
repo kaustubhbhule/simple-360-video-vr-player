@@ -155,7 +155,14 @@
     </div>
     
     <!-- A-Frame scene -->
-    <a-scene>
+    <a-scene 
+        renderer="antialias: false; 
+                  colorManagement: true; 
+                  sortObjects: false; 
+                  physicallyCorrectLights: false;
+                  maxCanvasWidth: 1920; 
+                  maxCanvasHeight: 1920;"
+        vr-mode-ui="enabled: true">
         <a-assets>
             <video 
                 id="video" 
@@ -168,15 +175,22 @@
             </video>
         </a-assets>
         
-        <!-- 360 video sphere -->
+        <!-- 360 video sphere - optimized geometry -->
         <a-videosphere 
             id="videosphere"
             src="#video"
-            rotation="0 180 0">
+            rotation="0 180 0"
+            radius="100"
+            segments-width="32"
+            segments-height="24">
         </a-videosphere>
         
-        <!-- Camera with look controls -->
-        <a-camera>
+        <!-- Camera with responsive look controls -->
+        <a-camera 
+            look-controls="pointerLockEnabled: false; 
+                          touchEnabled: true; 
+                          magicWindowTrackingEnabled: true;
+                          reverseMouseDrag: false">
             <a-cursor></a-cursor>
         </a-camera>
     </a-scene>
@@ -199,6 +213,22 @@
             if (file && file.type.startsWith('video/')) {
                 // Create object URL from file
                 const url = URL.createObjectURL(file);
+                
+                // Set video properties for performance
+                video.setAttribute('crossorigin', 'anonymous');
+                video.setAttribute('playsinline', '');
+                video.setAttribute('webkit-playsinline', '');
+                
+                // Reduce video quality if on mobile for better performance
+                if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+                    // Force lower resolution rendering on mobile
+                    const canvas = document.querySelector('canvas');
+                    if (canvas) {
+                        canvas.width = Math.min(window.innerWidth, 1280);
+                        canvas.height = Math.min(window.innerHeight, 720);
+                    }
+                }
+                
                 video.src = url;
                 
                 // Show file name
