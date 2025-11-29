@@ -73,16 +73,6 @@
             transform: translateY(-2px);
         }
         
-        .btn-success {
-            background: #4CAF50;
-            color: white;
-        }
-        
-        .btn-success:hover {
-            background: #388E3C;
-            transform: translateY(-2px);
-        }
-        
         #controls {
             position: fixed;
             bottom: 20px;
@@ -137,7 +127,7 @@
     <div id="overlay">
         <div class="title">🥽 360° VR Video Player</div>
         <div class="instructions">
-            Select a 360° video file to experience in VR. Works on desktop (drag to look), mobile (gyroscope), and VR headsets.
+            Select a 360° video file. For best performance, use videos at 2K resolution or lower (1920x1080 to 2048x1024).
         </div>
         <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
             📁 Choose Video File
@@ -154,18 +144,8 @@
         <button class="control-btn" id="pauseBtn" style="display: none;">⏸️ Pause</button>
     </div>
     
-    <!-- A-Frame scene -->
-    <a-scene 
-        renderer="antialias: false; 
-                  colorManagement: true; 
-                  sortObjects: false; 
-                  physicallyCorrectLights: false;
-                  maxCanvasWidth: 1280; 
-                  maxCanvasHeight: 720;
-                  precision: mediump;
-                  logarithmicDepthBuffer: false;"
-        vr-mode-ui="enabled: true"
-        stats>
+    <!-- A-Frame scene with default settings -->
+    <a-scene>
         <a-assets>
             <video 
                 id="video" 
@@ -178,25 +158,14 @@
             </video>
         </a-assets>
         
-        <!-- 360 video sphere - highly optimized -->
+        <!-- 360 video sphere with default A-Frame settings -->
         <a-videosphere 
-            id="videosphere"
             src="#video"
-            rotation="0 180 0"
-            radius="50"
-            segments-width="24"
-            segments-height="16"
-            material="shader: flat; side: back">
+            rotation="0 180 0">
         </a-videosphere>
         
-        <!-- Camera with responsive look controls -->
-        <a-camera 
-            look-controls="pointerLockEnabled: false; 
-                          touchEnabled: true; 
-                          magicWindowTrackingEnabled: true;
-                          reverseMouseDrag: false"
-            wasd-controls="enabled: false">
-        </a-camera>
+        <!-- Camera with default look controls -->
+        <a-camera></a-camera>
     </a-scene>
     
     <script>
@@ -217,23 +186,6 @@
             if (file && file.type.startsWith('video/')) {
                 // Create object URL from file
                 const url = URL.createObjectURL(file);
-                
-                // Set video properties for performance
-                video.setAttribute('crossorigin', 'anonymous');
-                video.setAttribute('playsinline', '');
-                video.setAttribute('webkit-playsinline', '');
-                
-                // Reduce video quality if on mobile for better performance
-                if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-                    // Force lower resolution rendering on mobile
-                    const sceneEl = document.querySelector('a-scene');
-                    sceneEl.renderer.setPixelRatio(1); // Force 1:1 pixel ratio
-                    
-                    // Reduce video playback quality
-                    video.style.width = '1280px';
-                    video.style.height = '720px';
-                }
-                
                 video.src = url;
                 
                 // Show file name
