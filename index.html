@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <title>360 VR Video Player</title>
+
   <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
 
   <style>
@@ -127,12 +128,11 @@
 
 <body>
 
-  <!-- Overlay -->
+  <!-- File Picker -->
   <div id="overlay">
     <div class="title">🥽 360° VR Video Player</div>
     <div class="instructions">
-      Select a 360° equirectangular video.  
-      For best VR quality, use 4K–6K files.
+      Select a 360° video (4K–6K recommended for VR clarity).
     </div>
     <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
       📁 Choose Video File
@@ -140,7 +140,7 @@
     <input type="file" id="fileInput" accept="video/*">
   </div>
 
-  <!-- File name -->
+  <!-- File Name -->
   <div id="fileName"></div>
 
   <!-- Controls -->
@@ -149,17 +149,15 @@
     <button class="control-btn" id="pauseBtn" style="display: none;">⏸ Pause</button>
   </div>
 
-  <!-- SCENE -->
-  <a-scene renderer="antialias: true; colorManagement: true; physicallyCorrectLights: true;"
-           vr-mode-ui="enabled: true"
-           hires>
+  <!-- VR Scene -->
+  <a-scene hires zoomoutvr="fov: 85" renderer="antialias: true; colorManagement: true;">
 
     <a-assets>
       <video id="video" loop crossorigin="anonymous" playsinline webkit-playsinline preload="auto"
-             style="display: none;"></video>
+        style="display: none;"></video>
     </a-assets>
 
-    <!-- Sharper + farther + less pixel look -->
+    <!-- Optimized clarity videosphere -->
     <a-videosphere 
       src="#video"
       rotation="0 180 0"
@@ -167,78 +165,126 @@
       material="shader: flat; side: back;">
     </a-videosphere>
 
-    <!-- Better FOV for mobile VR -->
-    <a-camera camera="fov: 85"></a-camera>
+    <a-camera></a-camera>
 
   </a-scene>
 
+
   <script>
-    // High-resolution renderer
-    AFRAME.registerComponent('hires', {
+    /* ---------------------------------------
+        COMPONENT 1: High Resolution Renderer
+    ----------------------------------------*/
+    AFRAME.registerComponent("hires", {
       init: function () {
         const r = this.el.sceneEl.renderer;
+
         r.setPixelRatio(Math.min(window.devicePixelRatio, 2.0));
         r.outputEncoding = THREE.sRGBEncoding;
-        r.toneMapping = THREE.ACESFilmicToneMapping;
+
+        // IMPORTANT: Keep smooth 120Hz → no tone mapping
+        r.toneMapping = THREE.NoToneMapping;
       }
     });
 
-    // UI Logic
-    const fileInput = document.getElementById('fileInput');
-    const overlay = document.getElementById('overlay');
-    const video = document.getElementById('video');
-    const playBtn = document.getElementById('playBtn');
-    const pauseBtn = document.getElementById('pauseBtn');
-    const controls = document.getElementById('controls');
-    const fileName = document.getElementById('fileName');
-    const scene = document.querySelector('a-scene');
+    /* ---------------------------------------
+        COMPONENT 2: VR Zoom-out FOV Fix
+    ----------------------------------------*/
+    AFRAME.registerComponent("zoomoutvr", {
+      schema: { fov: { default: 85 } },  // your zoom-out FOV
 
-    fileInput.addEventListener('change', function (e) {
+      init: function () {
+        const scene = this.el.sceneEl;
+
+        scene.addEventListener("enter-vr", () => {
+          const xr = scene.renderer.xr;
+          const session = xr.getSession();
+          if (!session) return;
+
+          const originalUpdate = xr.updateCamera;
+
+          xr.updateCamera = function (camera, parentMatrix) {
+            originalUpdate.call(this, camera, parentMatrix);
+
+            camera.cameras.forEach((eyeCam) => {
+              const newFOV = THREE.MathUtils.degToRad(scene.components.zoomoutvr.data.fov);
+
+              eyeCam.fov = scene.components.zoomoutvr.data.fov;
+
+              eyeCam.projectionMatrix.makePerspective(
+                -Math.tan(newFOV / 2),
+                Math.tan(newFOV / 2),
+                Math.tan(newFOV / 2),
+                -Math.tan(newFOV / 2),
+                eyeCam.near,
+                eyeCam.far
+              );
+
+              eyeCam.projectionMatrixInverse.copy(eyeCam.projectionMatrix).invert();
+            });
+          };
+        });
+      }
+    });
+
+    /* ---------------------------------------
+        UI + Video Logic
+    ----------------------------------------*/
+    const fileInput = document.getElementById("fileInput");
+    const overlay = document.getElementById("overlay");
+    const video = document.getElementById("video");
+    const playBtn = document.getElementById("playBtn");
+    const pauseBtn = document.getElementById("pauseBtn");
+    const controls = document.getElementById("controls");
+    const fileName = document.getElementById("fileName");
+    const scene = document.querySelector("a-scene");
+
+    fileInput.addEventListener("change", function (e) {
       const file = e.target.files[0];
 
-      if (file && file.type.startsWith('video/')) {
+      if (file && file.type.startsWith("video/")) {
         const url = URL.createObjectURL(file);
         video.src = url;
 
         fileName.textContent = `📹 ${file.name}`;
-        fileName.classList.add('visible');
+        fileName.classList.add("visible");
 
-        overlay.classList.add('hidden');
-        controls.classList.add('visible');
+        overlay.classList.add("hidden");
+        controls.classList.add("visible");
 
         video.load();
 
         const playPromise = video.play();
-        if (playPromise !== undefined) {
+        if (playPromise) {
           playPromise.then(() => {
-            playBtn.style.display = 'none';
-            pauseBtn.style.display = 'inline-block';
+            playBtn.style.display = "none";
+            pauseBtn.style.display = "inline-block";
           }).catch(() => {
-            playBtn.style.display = 'inline-block';
-            pauseBtn.style.display = 'none';
+            playBtn.style.display = "inline-block";
+            pauseBtn.style.display = "none";
           });
         }
       } else {
-        alert('Please select a valid video file');
+        alert("Please select a valid video file.");
       }
     });
 
-    playBtn.addEventListener('click', function () {
+    playBtn.addEventListener("click", () => {
       video.play();
-      playBtn.style.display = 'none';
-      pauseBtn.style.display = 'inline-block';
+      playBtn.style.display = "none";
+      pauseBtn.style.display = "inline-block";
     });
 
-    pauseBtn.addEventListener('click', function () {
+    pauseBtn.addEventListener("click", () => {
       video.pause();
-      playBtn.style.display = 'inline-block';
-      pauseBtn.style.display = 'none';
+      playBtn.style.display = "inline-block";
+      pauseBtn.style.display = "none";
     });
 
-    scene.addEventListener('enter-vr', function () {
+    scene.addEventListener("enter-vr", () => {
       if (video.paused) video.play();
     });
   </script>
 
 </body>
+
 </html>
