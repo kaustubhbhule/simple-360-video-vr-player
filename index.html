@@ -158,7 +158,7 @@
     </a-assets>
 
     <!-- Optimized clarity videosphere -->
-    <a-videosphere 
+    <a-videosphere videofix
       src="#video"
       rotation="0 180 0"
       radius="5000"
@@ -185,6 +185,29 @@
         r.toneMapping = THREE.NoToneMapping;
       }
     });
+
+    AFRAME.registerComponent('videofix', {
+  init: function () {
+    const el = this.el;
+    const video = document.getElementById('video');
+
+    el.sceneEl.addEventListener('enter-vr', () => {
+      // Force play again
+      if (video.paused) video.play();
+
+      // Force texture update every frame
+      el.sceneEl.renderer.setAnimationLoop(() => {
+        if (video.readyState >= 2) {
+          video.play().catch(()=>{});
+          if (el.getObject3D('mesh')) {
+            el.getObject3D('mesh').material.map.needsUpdate = true;
+          }
+        }
+      });
+    });
+  }
+});
+    
 
     /* ---------------------------------------
         COMPONENT 2: VR Zoom-out FOV Fix
